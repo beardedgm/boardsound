@@ -377,7 +377,9 @@
         }
 
         .hidden {
-            display: none;
+            display: none !important;
+            visibility: hidden;
+            opacity: 0;
         }
 
         .modal {
@@ -475,15 +477,28 @@
         }
 
         function confirmTabName() {
-            const name = document.getElementById('tabNameInput').value.trim() || `Tab ${tabCounter + 1}`;
-            createTab(name);
-            document.getElementById('tabModal').classList.add('hidden');
-            document.getElementById('tabNameInput').value = '';
+            const nameInput = document.getElementById('tabNameInput');
+            const name = nameInput.value.trim() || `Tab ${tabCounter + 1}`;
+            
+            // Close modal first to prevent any interference
+            closeTabModal();
+            
+            // Then create the tab
+            setTimeout(() => {
+                createTab(name);
+            }, 100);
         }
 
         function cancelTabName() {
-            document.getElementById('tabModal').classList.add('hidden');
-            document.getElementById('tabNameInput').value = '';
+            closeTabModal();
+        }
+
+        function closeTabModal() {
+            const modal = document.getElementById('tabModal');
+            const nameInput = document.getElementById('tabNameInput');
+            modal.classList.add('hidden');
+            nameInput.value = '';
+            nameInput.blur();
         }
 
         function createTab(name) {
@@ -792,8 +807,17 @@
         // Modal keyboard handling
         document.getElementById('tabNameInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
+                e.preventDefault();
                 confirmTabName();
             } else if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelTabName();
+            }
+        });
+
+        // Click outside modal to close
+        document.getElementById('tabModal').addEventListener('click', (e) => {
+            if (e.target.id === 'tabModal') {
                 cancelTabName();
             }
         });
