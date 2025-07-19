@@ -11,6 +11,16 @@ let libraryCounter = 0;
 let libraryData = new Map();
 const LOCAL_STORAGE_KEY = 'soundboardState';
 
+function showToast(msg) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
 function dataURLToBlob(url) {
     const arr = url.split(',');
     const mime = arr[0].match(/:(.*?);/)[1];
@@ -130,6 +140,7 @@ function createTab(name) {
     switchToTab(tabCounter);
     tabCounter++;
     saveState();
+    showToast(`Tab "${name}" created`);
 }
 
 function removeTab(tabId) {
@@ -217,9 +228,10 @@ async function loadSound(input, tabId) {
 
         setupAudioEvents(audio, soundId, tabId);
         saveState();
+        showToast('Sound added');
     } catch (e) {
         console.error('Failed to load sound file', e);
-        alert('Error loading selected file.');
+        showToast('Error loading file');
     }
 }
 
@@ -231,7 +243,7 @@ async function loadSoundFromUrl(url, tabId) {
         }
         const blob = await res.blob();
         if (!blob.type.includes('audio')) {
-            alert('URL must point to an audio file');
+            showToast('URL must point to an audio file');
             return;
         }
         const name = url.split('/').pop().split('?')[0] || 'audio';
@@ -263,9 +275,10 @@ async function loadSoundFromUrl(url, tabId) {
         audioElements.set(soundId, audio);
         setupAudioEvents(audio, soundId, tabId);
         saveState();
+        showToast('Sound added from URL');
     } catch (e) {
         console.error('Failed to load audio from URL', e);
-        alert(`Error loading audio: ${e.message}`);
+        showToast(`Error loading audio: ${e.message}`);
     }
 }
 
@@ -290,15 +303,18 @@ function createSoundCard(soundId, name, audio, tabId) {
             <div class="sound-status" id="status-${soundId}"></div>
         </div>
         <div class="sound-controls">
-            <button class="sound-btn play" onclick="playSound('${soundId}', ${tabId})">▶ Play</button>
+            <button class="sound-btn play" id="play-${soundId}" onclick="playSound('${soundId}', ${tabId})">▶ Play</button>
             <button class="sound-btn pause" onclick="pauseSound('${soundId}', ${tabId})">⏸ Pause</button>
             <button class="sound-btn stop" onclick="stopSound('${soundId}', ${tabId})">⏹ Stop</button>
             <button class="sound-btn loop-toggle" onclick="toggleLoop('${soundId}', ${tabId})" id="loop-${soundId}">🔁 Loop</button>
         </div>
         <div class="sound-volume">
             <label>Vol</label>
-            <input type="range" class="sound-volume-slider" id="volume-${soundId}" 
-                   min="0" max="100" value="100" 
+            <input type="range" class="sound-volume-slider" id="volume-${soundId}"
+                   min="0" max="100" value="100"
+                   oninput="updateSoundVolume('${soundId}', ${tabId}, this.value)">
+            <input type="number" class="volume-number" id="volumeNum-${soundId}"
+                   min="0" max="100" value="100"
                    oninput="updateSoundVolume('${soundId}', ${tabId}, this.value)">
             <span class="sound-volume-value" id="volumeValue-${soundId}">100%</span>
         </div>
@@ -337,7 +353,11 @@ function setupDragAndDrop(card) {
         draggedCard = card;
         e.dataTransfer.effectAllowed = 'move';
     });
-    card.addEventListener('dragover', (e) => e.preventDefault());
+    card.addEventListener('dragover', (e) => {
+        e.preventDefault();
+    });
+    card.addEventListener('dragenter', () => card.classList.add('drag-over'));
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
     card.addEventListener('drop', (e) => {
         e.preventDefault();
         if (!draggedCard || draggedCard === card) return;
@@ -345,14 +365,20 @@ function setupDragAndDrop(card) {
         grid.insertBefore(draggedCard, card);
         updateSoundOrder(grid);
         saveState();
+        card.classList.remove('drag-over');
     });
     card.addEventListener('dragend', () => {
         draggedCard = null;
+        card.classList.remove('drag-over');
     });
 }
 
 function setupEmptySlotDrag(slot) {
-    slot.addEventListener('dragover', (e) => e.preventDefault());
+    slot.addEventListener('dragover', (e) => {
+        e.preventDefault();
+    });
+    slot.addEventListener('dragenter', () => slot.classList.add('drag-over'));
+    slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
     slot.addEventListener('drop', (e) => {
         e.preventDefault();
         if (draggedCard) {
@@ -361,6 +387,7 @@ function setupEmptySlotDrag(slot) {
             updateSoundOrder(grid);
             saveState();
         }
+        slot.classList.remove('drag-over');
     });
 }
 
@@ -397,7 +424,8 @@ function setupAudioEvents(audio, soundId, tabId) {
     const card = document.querySelector(`[data-sound-id="${soundId}"]`);
     const status = document.getElementById(`status-${soundId}`);
     const progress = document.getElementById(`progress-${soundId}`);
-    
+    const playBtn = document.getElementById(`play-${soundId}`);
+
     // Set initial volume
     updateAudioVolume(soundId);
     
@@ -406,6 +434,7 @@ function setupAudioEvents(audio, soundId, tabId) {
         card.classList.add('playing');
         status.classList.remove('paused');
         status.classList.add('playing');
+        if (playBtn) playBtn.classList.add('active');
     });
     
     audio.addEventListener('pause', () => {
@@ -413,12 +442,14 @@ function setupAudioEvents(audio, soundId, tabId) {
         card.classList.add('paused');
         status.classList.remove('playing');
         status.classList.add('paused');
+        if (playBtn) playBtn.classList.remove('active');
     });
     
     audio.addEventListener('ended', () => {
         card.classList.remove('playing', 'paused');
         status.classList.remove('playing', 'paused');
         progress.style.width = '0%';
+        if (playBtn) playBtn.classList.remove('active');
     });
     
     audio.addEventListener('timeupdate', () => {
@@ -459,11 +490,12 @@ function toggleLoop(soundId, tabId) {
     const tab = tabData.get(tabId);
     const sound = tab.sounds.get(soundId);
     const loopBtn = document.getElementById(`loop-${soundId}`);
-    
+
     if (sound) {
         sound.isLooping = !sound.isLooping;
         sound.audio.loop = sound.isLooping;
         loopBtn.classList.toggle('active', sound.isLooping);
+        sound.element.classList.toggle('looping', sound.isLooping);
         saveState();
     }
 }
@@ -609,10 +641,14 @@ function updateMasterVolume(value) {
 function updateSoundVolume(soundId, tabId, value) {
     const tab = tabData.get(tabId);
     const sound = tab.sounds.get(soundId);
-    
+
     if (sound) {
         sound.volume = value / 100;
         document.getElementById(`volumeValue-${soundId}`).textContent = value + '%';
+        const slider = document.getElementById(`volume-${soundId}`);
+        const number = document.getElementById(`volumeNum-${soundId}`);
+        if (slider && slider.value !== value) slider.value = value;
+        if (number && number.value !== value) number.value = value;
         updateAudioVolume(soundId);
         saveState();
     }
@@ -736,7 +772,10 @@ async function loadState() {
                 audioElements.set(s.id, audio);
                 setupAudioEvents(audio, s.id, tab.id);
                 document.getElementById(`loop-${s.id}`).classList.toggle('active', s.isLooping);
+                card.classList.toggle('looping', s.isLooping);
                 document.getElementById(`volume-${s.id}`).value = Math.round(s.volume * 100);
+                const numInput = document.getElementById(`volumeNum-${s.id}`);
+                if (numInput) numInput.value = Math.round(s.volume * 100);
                 document.getElementById(`volumeValue-${s.id}`).textContent = Math.round(s.volume * 100) + '%';
                 updateAudioVolume(s.id);
             }
@@ -752,7 +791,7 @@ async function loadState() {
         switchToTab(currentTab);
     } catch (e) {
         console.error('Failed to load state', e);
-        alert('Unable to restore saved sounds. See console for details.');
+        showToast('Unable to restore saved sounds');
     }
 }
 
@@ -838,6 +877,7 @@ function addFromLibrary(fileId, tabId) {
         audioElements.set(soundId, audio);
         setupAudioEvents(audio, soundId, tabId);
         saveState();
+        showToast('Sound added from library');
     });
 }
 
@@ -853,9 +893,10 @@ async function libraryAddFile() {
         input.value = '';
         refreshLibraryList();
         saveState();
+        showToast('File added to library');
     } catch (e) {
         console.error('Failed to add file to library', e);
-        alert('Error adding file to library.');
+        showToast('Error adding file to library');
     }
 }
 
