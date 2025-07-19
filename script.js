@@ -9,6 +9,8 @@ let masterVolume = 1.0;
 let draggedCard = null;
 let libraryCounter = 0;
 let libraryData = new Map();
+// Track temporary object URLs for cleanup
+const temporaryFiles = new Set();
 const LOCAL_STORAGE_KEY = 'soundboardState';
 // Web Audio context setup
 let audioCtx = null;
@@ -222,25 +224,27 @@ function switchToTab(tabId) {
 }
 
 // Sound management
-async function loadSound(input, tabId) {
+async function loadSound(input, tabId, isTemporary = false) {
     const file = input.files[0];
     if (!file) return;
 
-    const fileId = `file-${libraryCounter++}`;
     const soundId = `sound-${soundCounter++}`;
+    const fileId = isTemporary ? null : `file-${libraryCounter++}`;
 
     try {
-        await storage.put(fileId, file);
+        if (!isTemporary) {
+            await storage.put(fileId, file);
+        }
         const objectUrl = URL.createObjectURL(file);
         const audio = new Audio(objectUrl);
         const gainNode = setupWebAudio(audio);
 
         // Create sound card
-        const soundCard = createSoundCard(soundId, file.name, audio, tabId);
+        const soundCard = createSoundCard(soundId, file.name, audio, tabId, isTemporary);
 
         // Replace the empty slot
         const grid = document.getElementById(`grid-${tabId}`);
-        const emptySlot = input.parentElement;
+        const emptySlot = input.closest('.empty-slot');
         emptySlot.replaceWith(soundCard);
 
         // Create new empty slot
@@ -255,23 +259,29 @@ async function loadSound(input, tabId) {
             isLooping: false,
             element: soundCard,
             volume: 1.0,
-            fileKey: fileId
+            fileKey: fileId,
+            isTemporary,
+            objectUrl
         });
 
-        libraryData.set(fileId, { name: file.name });
+        if (!isTemporary && fileId) {
+            libraryData.set(fileId, { name: file.name });
+        } else {
+            temporaryFiles.add(objectUrl);
+        }
 
         audioElements.set(soundId, audio);
 
         setupAudioEvents(audio, soundId, tabId);
         saveState();
-        showToast('Sound added');
+        showToast(isTemporary ? 'Quick Play loaded' : 'Sound added');
     } catch (e) {
         console.error('Failed to load sound file', e);
         showToast('Error loading file');
     }
 }
 
-async function loadSoundFromUrl(url, tabId) {
+async function loadSoundFromUrl(url, tabId, isTemporary = false) {
     try {
         const res = await fetch(url);
         if (!res.ok) {
@@ -283,14 +293,16 @@ async function loadSoundFromUrl(url, tabId) {
             return;
         }
         const name = url.split('/').pop().split('?')[0] || 'audio';
-        const fileId = `file-${libraryCounter++}`;
+        const fileId = isTemporary ? null : `file-${libraryCounter++}`;
         const soundId = `sound-${soundCounter++}`;
-        await storage.put(fileId, blob);
+        if (!isTemporary) {
+            await storage.put(fileId, blob);
+        }
         const objectUrl = URL.createObjectURL(blob);
         const audio = new Audio(objectUrl);
         const gainNode = setupWebAudio(audio);
 
-        const soundCard = createSoundCard(soundId, name, audio, tabId);
+        const soundCard = createSoundCard(soundId, name, audio, tabId, isTemporary);
 
         const grid = document.getElementById(`grid-${tabId}`);
         const emptySlot = grid.querySelector('.empty-slot');
@@ -305,37 +317,61 @@ async function loadSoundFromUrl(url, tabId) {
             isLooping: false,
             element: soundCard,
             volume: 1.0,
-            fileKey: fileId
+            fileKey: fileId,
+            isTemporary,
+            objectUrl
         });
 
-        libraryData.set(fileId, { name });
+        if (!isTemporary && fileId) {
+            libraryData.set(fileId, { name });
+        } else {
+            temporaryFiles.add(objectUrl);
+        }
 
         audioElements.set(soundId, audio);
         setupAudioEvents(audio, soundId, tabId);
         saveState();
-        showToast('Sound added from URL');
+        showToast(isTemporary ? 'Temporary sound added from URL' : 'Sound added from URL');
     } catch (e) {
         console.error('Failed to load audio from URL', e);
         showToast(`Error loading audio: ${e.message}`);
     }
 }
 
-function promptLoadFromUrl(tabId) {
+function promptLoadFromUrl(tabId, isTemporary = false) {
     const url = prompt('Enter MP3/WAV URL');
     if (url) {
-        loadSoundFromUrl(url.trim(), tabId);
+        loadSoundFromUrl(url.trim(), tabId, isTemporary);
     }
 }
 
-function createSoundCard(soundId, name, audio, tabId) {
+function loadTemporaryFile(tabId) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.mp3,.wav';
+    input.onchange = () => loadSound(input, tabId, true);
+    input.click();
+}
+
+function loadFileForSave(tabId) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.mp3,.wav';
+    input.onchange = () => loadSound(input, tabId, false);
+    input.click();
+}
+
+function createSoundCard(soundId, name, audio, tabId, isTemporary = false) {
     const card = document.createElement('div');
     card.className = 'sound-card';
+    if (isTemporary) card.classList.add('temporary');
     card.dataset.soundId = soundId;
     card.dataset.tabId = tabId;
 
     card.innerHTML = `
         <button class="remove-sound" onclick="removeSound('${soundId}', ${tabId})">×</button>
         <button class="rename-sound" onclick="startRenameSound('${soundId}', ${tabId})" title="Rename">✎</button>
+        ${isTemporary ? '<div class="temp-indicator">⚡ Quick Play</div>' : ''}
         <div class="sound-header">
             <div class="sound-title" title="${name}">${name}</div>
             <div class="sound-status" id="status-${soundId}"></div>
@@ -431,12 +467,12 @@ function createEmptySlot(tabId) {
     const emptySlot = document.createElement('div');
     emptySlot.className = 'empty-slot';
     emptySlot.innerHTML = `
-        <input type="file" accept=".mp3,.wav" onchange="loadSound(this, ${tabId})">
-        <div class="empty-text">
-            <strong>Drop or Click</strong>
-            Add MP3/WAV file
+        <div class="button-grid">
+            <button class="btn small" onclick="loadFileForSave(${tabId})">💾 Save to Library</button>
+            <button class="btn small" onclick="loadTemporaryFile(${tabId})">⚡ Quick Play</button>
+            <button class="btn small" onclick="promptLoadFromUrl(${tabId})">🌐 URL (Save)</button>
+            <button class="btn small" onclick="promptLoadFromUrl(${tabId}, true)">🌐 URL (Temp)</button>
         </div>
-        <button class="url-btn" onclick="promptLoadFromUrl(${tabId})">Load from URL</button>
     `;
     setupEmptySlotDrag(emptySlot);
     return emptySlot;
@@ -606,6 +642,11 @@ function removeSound(soundId, tabId) {
         if (sound.gainNode) sound.gainNode.disconnect();
         const fileKey = sound.fileKey;
 
+        if (sound.isTemporary && sound.objectUrl) {
+            URL.revokeObjectURL(sound.objectUrl);
+            temporaryFiles.delete(sound.objectUrl);
+        }
+
         // Remove from DOM and data structures
         sound.element.remove();
         tab.sounds.delete(soundId);
@@ -760,6 +801,7 @@ function saveState() {
     tabData.forEach((tab, id) => {
         const tabInfo = { id, name: tab.name, sounds: [] };
         tab.sounds.forEach((sound, sid) => {
+            if (sound.isTemporary) return;
             tabInfo.sounds.push({
                 id: sid,
                 name: sound.name,
@@ -1130,3 +1172,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // Prevent default drag behavior
 document.addEventListener('dragover', (e) => e.preventDefault());
 document.addEventListener('drop', (e) => e.preventDefault());
+
+// Cleanup temporary object URLs on page unload
+window.addEventListener('beforeunload', () => {
+    temporaryFiles.forEach(url => URL.revokeObjectURL(url));
+    temporaryFiles.clear();
+});

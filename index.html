@@ -39,12 +39,12 @@
             <div class="panel-content" id="panel-0">
                 <div class="sound-grid" id="grid-0">
                     <div class="empty-slot">
-                        <input type="file" accept=".mp3,.wav" onchange="loadSound(this, 0)">
-                        <div class="empty-text">
-                            <strong>Drop or Click</strong>
-                            Add MP3/WAV file
+                        <div class="button-grid">
+                            <button class="btn small" onclick="loadFileForSave(0)">💾 Save to Library</button>
+                            <button class="btn small" onclick="loadTemporaryFile(0)">⚡ Quick Play</button>
+                            <button class="btn small" onclick="promptLoadFromUrl(0)">🌐 URL (Save)</button>
+                            <button class="btn small" onclick="promptLoadFromUrl(0, true)">🌐 URL (Temp)</button>
                         </div>
-                        <button class="url-btn" onclick="promptLoadFromUrl(0)">Load from URL</button>
                     </div>
                 </div>
             </div>
