@@ -10,6 +10,19 @@ let draggedCard = null;
 let libraryCounter = 0;
 let libraryData = new Map();
 const LOCAL_STORAGE_KEY = 'soundboardState';
+// Web Audio context setup
+let audioCtx = null;
+let masterGain = null;
+
+function initAudioContext() {
+    if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AC();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = masterVolume;
+        masterGain.connect(audioCtx.destination);
+    }
+}
 
 function showToast(msg) {
     const container = document.getElementById('toastContainer');
@@ -40,6 +53,17 @@ function blobToDataURL(blob) {
         reader.onerror = () => reject(reader.error);
         reader.readAsDataURL(blob);
     });
+}
+
+function setupWebAudio(audio, initialVolume = 1.0) {
+    initAudioContext();
+    if (!audioCtx) return null;
+    const source = audioCtx.createMediaElementSource(audio);
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.value = initialVolume;
+    source.connect(gainNode);
+    gainNode.connect(masterGain);
+    return gainNode;
 }
 
 // Initialize first tab
@@ -162,6 +186,7 @@ function removeTab(tabId) {
             if (sound.audio) {
                 sound.audio.pause();
                 sound.audio.src = '';
+                if (sound.gainNode) sound.gainNode.disconnect();
             }
         });
     }
@@ -208,6 +233,7 @@ async function loadSound(input, tabId) {
         await storage.put(fileId, file);
         const objectUrl = URL.createObjectURL(file);
         const audio = new Audio(objectUrl);
+        const gainNode = setupWebAudio(audio);
 
         // Create sound card
         const soundCard = createSoundCard(soundId, file.name, audio, tabId);
@@ -225,6 +251,7 @@ async function loadSound(input, tabId) {
         tab.sounds.set(soundId, {
             name: file.name,
             audio: audio,
+            gainNode: gainNode,
             isLooping: false,
             element: soundCard,
             volume: 1.0,
@@ -261,6 +288,7 @@ async function loadSoundFromUrl(url, tabId) {
         await storage.put(fileId, blob);
         const objectUrl = URL.createObjectURL(blob);
         const audio = new Audio(objectUrl);
+        const gainNode = setupWebAudio(audio);
 
         const soundCard = createSoundCard(soundId, name, audio, tabId);
 
@@ -273,6 +301,7 @@ async function loadSoundFromUrl(url, tabId) {
         tab.sounds.set(soundId, {
             name,
             audio,
+            gainNode: gainNode,
             isLooping: false,
             element: soundCard,
             volume: 1.0,
@@ -472,6 +501,8 @@ function playSound(soundId, tabId) {
     const tab = tabData.get(tabId);
     const sound = tab.sounds.get(soundId);
     if (sound && sound.audio) {
+        initAudioContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
         sound.audio.play().catch(e => console.log('Playback failed:', e));
     }
 }
@@ -572,6 +603,7 @@ function removeSound(soundId, tabId) {
         // Stop and cleanup audio
         sound.audio.pause();
         sound.audio.src = '';
+        if (sound.gainNode) sound.gainNode.disconnect();
         const fileKey = sound.fileKey;
 
         // Remove from DOM and data structures
@@ -641,6 +673,7 @@ function clearCurrentPanel() {
         tab.sounds.forEach(sound => {
             sound.audio.pause();
             sound.audio.src = '';
+            if (sound.gainNode) sound.gainNode.disconnect();
             const fileKey = sound.fileKey;
             sound.element.remove();
             if (fileKey && !isFileReferencedInTabs(fileKey) && !libraryData.has(fileKey)) {
@@ -670,6 +703,7 @@ function clearCurrentPanel() {
 function updateMasterVolume(value) {
     masterVolume = value / 100;
     document.getElementById('masterVolumeValue').textContent = value + '%';
+    if (masterGain) masterGain.gain.value = masterVolume;
     
     // Update all currently loaded audio elements
     audioElements.forEach((audio, soundId) => {
@@ -696,19 +730,20 @@ function updateSoundVolume(soundId, tabId, value) {
 
 function updateAudioVolume(soundId) {
     const audio = audioElements.get(soundId);
-    if (audio) {
-        // Find the sound data to get individual volume
-        let soundVolume = 1.0;
-        for (const tab of tabData.values()) {
-            if (tab.sounds.has(soundId)) {
-                soundVolume = tab.sounds.get(soundId).volume;
-                break;
-            }
+    if (!audio) return;
+    let soundData = null;
+    for (const tab of tabData.values()) {
+        if (tab.sounds.has(soundId)) {
+            soundData = tab.sounds.get(soundId);
+            break;
         }
-        
-        // Set final volume as master * individual
-        audio.volume = masterVolume * soundVolume;
     }
+    const vol = soundData ? soundData.volume : 1.0;
+    audio.volume = masterVolume * vol;
+    if (soundData && soundData.gainNode) {
+        soundData.gainNode.gain.value = vol;
+    }
+    if (masterGain) masterGain.gain.value = masterVolume;
 }
 
 function saveState() {
@@ -792,6 +827,7 @@ async function loadState() {
                 if (!blob) continue;
                 const url = URL.createObjectURL(blob);
                 const audio = new Audio(url);
+                const gainNode = setupWebAudio(audio, s.volume);
                 audio.loop = s.isLooping;
                 const card = createSoundCard(s.id, s.name, audio, tab.id);
                 grid.appendChild(card);
@@ -799,6 +835,7 @@ async function loadState() {
                 tabData.get(tab.id).sounds.set(s.id, {
                     name: s.name,
                     audio,
+                    gainNode: gainNode,
                     isLooping: s.isLooping,
                     element: card,
                     volume: s.volume,
@@ -914,6 +951,7 @@ function addFromLibrary(fileId, tabId) {
         if (!blob) return;
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
+        const gainNode = setupWebAudio(audio);
         const soundId = `sound-${soundCounter++}`;
 
         const soundCard = createSoundCard(soundId, data.name, audio, tabId);
@@ -926,6 +964,7 @@ function addFromLibrary(fileId, tabId) {
         tab.sounds.set(soundId, {
             name: data.name,
             audio,
+            gainNode: gainNode,
             isLooping: false,
             element: soundCard,
             volume: 1.0,
