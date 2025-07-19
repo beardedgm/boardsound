@@ -1,0 +1,568 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%);
+    color: #ffffff;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    background: #333;
+    padding: 15px 20px;
+    border-bottom: 2px solid #444;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.app-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #00ff88;
+}
+
+.global-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.master-volume {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #444;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #555;
+}
+
+.master-volume label {
+    font-size: 12px;
+    color: #ccc;
+    white-space: nowrap;
+}
+
+.volume-slider {
+    width: 80px;
+    height: 4px;
+    background: #555;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.volume-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #00ff88;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+    background: #00cc6a;
+    transform: scale(1.1);
+}
+
+.volume-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #00ff88;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.volume-slider::-moz-range-thumb:hover {
+    background: #00cc6a;
+    transform: scale(1.1);
+}
+
+.volume-value {
+    font-size: 11px;
+    color: #00ff88;
+    min-width: 30px;
+    text-align: center;
+}
+
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    background: #555;
+    color: white;
+}
+
+.btn:hover {
+    background: #666;
+    transform: translateY(-1px);
+}
+
+.btn.primary {
+    background: #007bff;
+}
+
+.btn.primary:hover {
+    background: #0056b3;
+}
+
+.btn.danger {
+    background: #dc3545;
+}
+
+.btn.danger:hover {
+    background: #c82333;
+}
+
+.tab-container {
+    background: #2a2a2a;
+    border-bottom: 1px solid #444;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    overflow-x: auto;
+}
+
+.tab {
+    padding: 12px 20px;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    user-select: none;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tab.active {
+    border-bottom-color: #00ff88;
+    background: rgba(0, 255, 136, 0.1);
+}
+
+.tab:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.tab-close {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #666;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 10px;
+    display: none;
+}
+
+.tab:hover .tab-close {
+    display: block;
+}
+
+.tab-close:hover {
+    background: #dc3545;
+}
+
+.add-tab {
+    padding: 12px;
+    cursor: pointer;
+    color: #888;
+    border-left: 1px solid #444;
+    margin-left: 10px;
+}
+
+.add-tab:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.panel-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.sound-grid {
+    display: grid;
+    /*
+     * Increase the minimum column width so that card elements such as the
+     * volume slider fit comfortably without bleeding into the padding.
+     */
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 15px;
+    max-width: 100%;
+}
+
+.sound-card {
+    background: linear-gradient(145deg, #3a3a3a 0%, #2e2e2e 100%);
+    border-radius: 12px;
+    padding: 15px;
+    border: 2px solid #444;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.sound-card:hover {
+    border-color: #666;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.sound-card.playing {
+    border-color: #00ff88;
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+}
+
+.sound-card.paused {
+    border-color: #ffc107;
+    box-shadow: 0 0 20px rgba(255, 193, 7, 0.3);
+}
+
+.sound-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.sound-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    truncate: true;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sound-title-input {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    background: #555;
+    border: 1px solid #777;
+    border-radius: 4px;
+    width: 100%;
+    padding: 2px 4px;
+}
+
+.sound-status {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #666;
+}
+
+.sound-status.playing {
+    background: #00ff88;
+    animation: pulse 2s infinite;
+}
+
+.sound-status.paused {
+    background: #ffc107;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.sound-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.sound-btn {
+    padding: 8px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+    background: #555;
+    color: white;
+}
+
+.sound-btn:hover {
+    background: #666;
+}
+
+.sound-btn.play {
+    background: #28a745;
+}
+
+.sound-btn.play:hover {
+    background: #218838;
+}
+
+.sound-btn.pause {
+    background: #ffc107;
+    color: #000;
+}
+
+.sound-btn.pause:hover {
+    background: #e0a800;
+}
+
+.sound-btn.stop {
+    background: #dc3545;
+}
+
+.sound-btn.stop:hover {
+    background: #c82333;
+}
+
+.loop-toggle {
+    grid-column: span 2;
+    background: #6c757d;
+}
+
+.loop-toggle.active {
+    background: #007bff;
+}
+
+.time-controls {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+}
+
+.time-btn {
+    flex: 1;
+    padding: 4px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 10px;
+    background: #444;
+    color: white;
+    transition: background 0.2s ease;
+}
+
+.time-btn:hover {
+    background: #555;
+}
+
+.progress-container {
+    margin-top: 8px;
+    background: #444;
+    border-radius: 10px;
+    height: 4px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #00ff88, #00cc6a);
+    width: 0%;
+    transition: width 0.1s ease;
+}
+
+.sound-volume {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 4px 0;
+}
+
+.sound-volume label {
+    font-size: 10px;
+    color: #ccc;
+    min-width: 20px;
+}
+
+.sound-volume-slider {
+    flex: 1;
+    height: 3px;
+    background: #555;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+.sound-volume-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #007bff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sound-volume-slider::-webkit-slider-thumb:hover {
+    background: #0056b3;
+    transform: scale(1.1);
+}
+
+.sound-volume-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #007bff;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.sound-volume-slider::-moz-range-thumb:hover {
+    background: #0056b3;
+    transform: scale(1.1);
+}
+
+.sound-volume-value {
+    font-size: 9px;
+    color: #007bff;
+    min-width: 25px;
+    text-align: center;
+}
+
+.empty-slot {
+    background: linear-gradient(145deg, #2a2a2a 0%, #1e1e1e 100%);
+    border: 2px dashed #555;
+    border-radius: 12px;
+    padding: 30px 15px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.empty-slot:hover {
+    border-color: #777;
+    background: linear-gradient(145deg, #333 0%, #2a2a2a 100%);
+}
+
+.empty-slot input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.empty-text {
+    color: #888;
+    font-size: 14px;
+}
+
+.empty-text strong {
+    color: #fff;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.remove-sound {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(220, 53, 69, 0.8);
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.rename-sound {
+    position: absolute;
+    top: 5px;
+    right: 30px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(0, 123, 255, 0.8);
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.sound-card:hover .remove-sound {
+    opacity: 1;
+}
+
+.sound-card:hover .rename-sound {
+    opacity: 1;
+}
+
+.rename-sound:hover {
+    background: #007bff;
+}
+
+.remove-sound:hover {
+    background: #dc3545;
+}
+
+.hidden {
+    display: none !important;
+    visibility: hidden;
+    opacity: 0;
+}
+
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #333;
+    padding: 20px;
+    border-radius: 12px;
+    max-width: 400px;
+    width: 90%;
+}
+
+.modal-content input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #555;
+    border-radius: 6px;
+    background: #444;
+    color: white;
+    margin: 10px 0;
+}
