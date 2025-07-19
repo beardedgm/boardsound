@@ -177,14 +177,15 @@ function switchToTab(tabId) {
 }
 
 // Sound management
-function loadSound(input, tabId) {
+async function loadSound(input, tabId) {
     const file = input.files[0];
     if (!file) return;
 
     const fileId = `file-${libraryCounter++}`;
     const soundId = `sound-${soundCounter++}`;
 
-    storage.put(fileId, file).then(() => {
+    try {
+        await storage.put(fileId, file);
         const objectUrl = URL.createObjectURL(file);
         const audio = new Audio(objectUrl);
 
@@ -216,12 +217,18 @@ function loadSound(input, tabId) {
 
         setupAudioEvents(audio, soundId, tabId);
         saveState();
-    });
+    } catch (e) {
+        console.error('Failed to load sound file', e);
+        alert('Error loading selected file.');
+    }
 }
 
 async function loadSoundFromUrl(url, tabId) {
     try {
         const res = await fetch(url);
+        if (!res.ok) {
+            throw new Error(`Request failed with status ${res.status}`);
+        }
         const blob = await res.blob();
         if (!blob.type.includes('audio')) {
             alert('URL must point to an audio file');
@@ -257,7 +264,8 @@ async function loadSoundFromUrl(url, tabId) {
         setupAudioEvents(audio, soundId, tabId);
         saveState();
     } catch (e) {
-        alert('Failed to load audio from URL');
+        console.error('Failed to load audio from URL', e);
+        alert(`Error loading audio: ${e.message}`);
     }
 }
 
@@ -744,6 +752,7 @@ async function loadState() {
         switchToTab(currentTab);
     } catch (e) {
         console.error('Failed to load state', e);
+        alert('Unable to restore saved sounds. See console for details.');
     }
 }
 
@@ -832,18 +841,22 @@ function addFromLibrary(fileId, tabId) {
     });
 }
 
-function libraryAddFile() {
+async function libraryAddFile() {
     const input = document.getElementById('libraryFileInput');
     const file = input.files[0];
     if (!file) return;
 
     const fileId = `file-${libraryCounter++}`;
-    storage.put(fileId, file).then(() => {
+    try {
+        await storage.put(fileId, file);
         libraryData.set(fileId, { name: file.name });
         input.value = '';
         refreshLibraryList();
         saveState();
-    });
+    } catch (e) {
+        console.error('Failed to add file to library', e);
+        alert('Error adding file to library.');
+    }
 }
 
 // Initialize first tab with rename functionality
