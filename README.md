@@ -11,5 +11,6 @@ A browser-based soundboard for quickly loading and playing audio clips. Sounds c
 5. Create additional tabs for different groups of sounds.
 6. The "Library" button shows previously added files saved in your browser.
 7. Within the library you can rename or delete stored files (you'll be warned if a file is used in any tab).
+8. Use the Export/Import buttons to backup or restore your entire board as a JSON file.
 
 Saved state is stored in `localStorage` and audio files are kept in IndexedDB so they persist between sessions.

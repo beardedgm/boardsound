@@ -33,6 +33,15 @@ function dataURLToBlob(url) {
     return new Blob([u8arr], { type: mime });
 }
 
+function blobToDataURL(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+    });
+}
+
 // Initialize first tab
 tabData.set(0, {
     name: 'Main Sounds',
@@ -980,6 +989,89 @@ async function libraryDeleteFile(fileId) {
     refreshLibraryList();
     saveState();
     showToast('File deleted from library');
+}
+
+async function exportBoard() {
+    saveState();
+    const stateStr = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (!stateStr) {
+        showToast('Nothing to export');
+        return;
+    }
+
+    const state = JSON.parse(stateStr);
+    const files = {};
+    for (const [fileId, data] of libraryData.entries()) {
+        const blob = await storage.get(fileId);
+        if (!blob) continue;
+        files[fileId] = {
+            name: data.name,
+            dataUrl: await blobToDataURL(blob)
+        };
+    }
+
+    const exportData = { state, files };
+    const blob = new Blob([JSON.stringify(exportData)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'soundboard-export.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Exported board');
+}
+
+function triggerImport() {
+    const input = document.getElementById('importInput');
+    if (input) input.click();
+}
+
+function handleImportFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+        try {
+            const data = JSON.parse(reader.result);
+            await importBoardData(data);
+            input.value = '';
+        } catch (e) {
+            console.error('Import failed', e);
+            showToast('Failed to import');
+        }
+    };
+    reader.onerror = () => {
+        showToast('Error reading file');
+    };
+    reader.readAsText(file);
+}
+
+async function importBoardData(data) {
+    if (!data || !data.state) {
+        showToast('Invalid import');
+        return;
+    }
+
+    await storage.clear();
+    libraryData.clear();
+
+    if (data.files) {
+        for (const [fileId, info] of Object.entries(data.files)) {
+            try {
+                const blob = dataURLToBlob(info.dataUrl);
+                await storage.put(fileId, blob);
+                libraryData.set(fileId, { name: info.name });
+            } catch (e) {
+                console.error('Failed to import file', e);
+            }
+        }
+    }
+
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data.state));
+    await loadState();
+    showToast('Import complete');
 }
 
 // Initialize first tab with rename functionality

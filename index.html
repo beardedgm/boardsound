@@ -21,6 +21,9 @@
                 <button class="btn" onclick="stopAllSounds()">Stop All</button>
                 <button class="btn danger" onclick="clearCurrentPanel()">Clear Panel</button>
                 <button class="btn" onclick="openLibrary()">Library</button>
+                <button class="btn" onclick="exportBoard()">Export</button>
+                <button class="btn" onclick="triggerImport()">Import</button>
+                <input type="file" id="importInput" accept=".json" class="hidden" onchange="handleImportFile(this)">
             </div>
         </div>
 
