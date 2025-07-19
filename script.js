@@ -180,23 +180,16 @@ function createTab(name) {
 
 function removeTab(tabId) {
     if (tabData.size <= 1) return; // Don't remove last tab
-    
+
     // Stop all sounds in this tab
     const tab = tabData.get(tabId);
     if (tab) {
-        tab.sounds.forEach(sound => {
-            if (sound.audio) {
-                sound.audio.pause();
-                sound.audio.src = '';
-                if (sound.gainNode) sound.gainNode.disconnect();
-            }
-            if (sound.objectUrl) {
-                URL.revokeObjectURL(sound.objectUrl);
-                objectUrls.delete(sound.objectUrl);
-            }
-        });
+        // Use removeSound to properly clean up each sound
+        for (const id of Array.from(tab.sounds.keys())) {
+            removeSound(id, tabId);
+        }
     }
-    
+
     // Remove tab data and elements
     tabData.delete(tabId);
     document.querySelector(`[data-tab="${tabId}"]`).remove();
