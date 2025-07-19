@@ -313,9 +313,6 @@ function createSoundCard(soundId, name, audio, tabId) {
             <input type="range" class="sound-volume-slider" id="volume-${soundId}"
                    min="0" max="100" value="100"
                    oninput="updateSoundVolume('${soundId}', ${tabId}, this.value)">
-            <input type="number" class="volume-number" id="volumeNum-${soundId}"
-                   min="0" max="100" value="100"
-                   oninput="updateSoundVolume('${soundId}', ${tabId}, this.value)">
             <span class="sound-volume-value" id="volumeValue-${soundId}">100%</span>
         </div>
         <div class="time-controls">
@@ -646,9 +643,7 @@ function updateSoundVolume(soundId, tabId, value) {
         sound.volume = value / 100;
         document.getElementById(`volumeValue-${soundId}`).textContent = value + '%';
         const slider = document.getElementById(`volume-${soundId}`);
-        const number = document.getElementById(`volumeNum-${soundId}`);
         if (slider && slider.value !== value) slider.value = value;
-        if (number && number.value !== value) number.value = value;
         updateAudioVolume(soundId);
         saveState();
     }
@@ -774,8 +769,6 @@ async function loadState() {
                 document.getElementById(`loop-${s.id}`).classList.toggle('active', s.isLooping);
                 card.classList.toggle('looping', s.isLooping);
                 document.getElementById(`volume-${s.id}`).value = Math.round(s.volume * 100);
-                const numInput = document.getElementById(`volumeNum-${s.id}`);
-                if (numInput) numInput.value = Math.round(s.volume * 100);
                 document.getElementById(`volumeValue-${s.id}`).textContent = Math.round(s.volume * 100) + '%';
                 updateAudioVolume(s.id);
             }

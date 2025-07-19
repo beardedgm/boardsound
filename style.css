@@ -459,16 +459,6 @@ body {
     text-align: center;
 }
 
-.volume-number {
-    width: 40px;
-    background: #444;
-    border: 1px solid #555;
-    color: #fff;
-    border-radius: 4px;
-    font-size: 10px;
-    padding: 2px 4px;
-    text-align: center;
-}
 
 .empty-slot {
     background: linear-gradient(145deg, #2a2a2a 0%, #1e1e1e 100%);
