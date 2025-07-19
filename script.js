@@ -15,6 +15,7 @@ const LOCAL_STORAGE_KEY = 'soundboardState';
 // Web Audio context setup
 let audioCtx = null;
 let masterGain = null;
+let saveTimer = null;
 
 function initAudioContext() {
     if (!audioCtx) {
@@ -104,7 +105,7 @@ function confirmTabAction() {
             const tab = tabData.get(renamingTabId);
             tab.name = name;
             document.querySelector(`[data-tab="${renamingTabId}"] span`).textContent = name;
-            saveState();
+            scheduleSaveState();
         }
     } else {
         // Creating new tab
@@ -174,7 +175,7 @@ function createTab(name) {
     createTabElement(tabCounter, name);
     switchToTab(tabCounter);
     tabCounter++;
-    saveState();
+    scheduleSaveState();
     showToast(`Tab "${name}" created`);
 }
 
@@ -200,7 +201,7 @@ function removeTab(tabId) {
         const firstTab = Array.from(tabData.keys())[0];
         switchToTab(firstTab);
     }
-    saveState();
+    scheduleSaveState();
 }
 
 function switchToTab(tabId) {
@@ -217,7 +218,7 @@ function switchToTab(tabId) {
     document.getElementById(`panel-${tabId}`).classList.remove('hidden');
 
     currentTab = tabId;
-    saveState();
+    scheduleSaveState();
 }
 
 // Sound management
@@ -276,7 +277,7 @@ async function loadSound(input, tabId, isTemporary = false) {
         audioElements.set(soundId, audio);
 
         setupAudioEvents(audio, soundId, tabId);
-        saveState();
+        scheduleSaveState();
         showToast(isTemporary ? 'Quick Play loaded' : 'Sound added');
     } catch (e) {
         console.error('Failed to load sound file', e);
@@ -332,7 +333,7 @@ async function loadSoundFromUrl(url, tabId, isTemporary = false) {
 
         audioElements.set(soundId, audio);
         setupAudioEvents(audio, soundId, tabId);
-        saveState();
+        scheduleSaveState();
         showToast(isTemporary ? 'Temporary sound added from URL' : 'Sound added from URL');
     } catch (e) {
         console.error('Failed to load audio from URL', e);
@@ -438,7 +439,7 @@ function setupDragAndDrop(card) {
         const grid = card.parentElement;
         grid.insertBefore(draggedCard, card);
         updateSoundOrder(grid);
-        saveState();
+        scheduleSaveState();
         card.classList.remove('drag-over');
     });
     card.addEventListener('dragend', () => {
@@ -459,7 +460,7 @@ function setupEmptySlotDrag(slot) {
             const grid = slot.parentElement;
             grid.insertBefore(draggedCard, slot);
             updateSoundOrder(grid);
-            saveState();
+            scheduleSaveState();
         }
         slot.classList.remove('drag-over');
     });
@@ -572,7 +573,7 @@ function toggleLoop(soundId, tabId) {
         sound.audio.loop = sound.isLooping;
         loopBtn.classList.toggle('active', sound.isLooping);
         sound.element.classList.toggle('looping', sound.isLooping);
-        saveState();
+        scheduleSaveState();
     }
 }
 
@@ -615,7 +616,7 @@ function startRenameSound(soundId, tabId) {
         if (save && sound.fileKey && libraryData.has(sound.fileKey)) {
             renameFile(sound.fileKey, name);
         } else {
-            saveState();
+            scheduleSaveState();
         }
     };
 
@@ -658,7 +659,7 @@ function removeSound(soundId, tabId) {
             storage.remove(fileKey);
         }
     }
-    saveState();
+    scheduleSaveState();
 }
 
 function isFileReferencedInTabs(fileKey) {
@@ -697,7 +698,7 @@ function renameFile(fileId, newName) {
         refreshLibraryList();
     }
 
-    saveState();
+    scheduleSaveState();
 }
 
 // Global controls
@@ -724,7 +725,7 @@ function clearCurrentPanel() {
         const grid = document.getElementById(`grid-${currentTab}`);
         grid.innerHTML = '';
         grid.appendChild(createEmptySlot(currentTab));
-        saveState();
+        scheduleSaveState();
     }
 }
 
@@ -738,7 +739,7 @@ function updateMasterVolume(value) {
     audioElements.forEach((audio, soundId) => {
         updateAudioVolume(soundId);
     });
-    saveState();
+    scheduleSaveState();
 }
 
 function updateSoundVolume(soundId, tabId, value) {
@@ -753,7 +754,7 @@ function updateSoundVolume(soundId, tabId, value) {
         if (slider && slider.value !== value) slider.value = value;
         if (number && number.value !== value) number.value = value;
         updateAudioVolume(soundId);
-        saveState();
+        scheduleSaveState();
     }
 }
 
@@ -773,6 +774,11 @@ function updateAudioVolume(soundId) {
         soundData.gainNode.gain.value = vol;
     }
     if (masterGain) masterGain.gain.value = masterVolume;
+}
+
+function scheduleSaveState(delay = 300) {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveState, delay);
 }
 
 function saveState() {
@@ -1008,7 +1014,7 @@ function addFromLibrary(fileId, tabId) {
 
         audioElements.set(soundId, audio);
         setupAudioEvents(audio, soundId, tabId);
-        saveState();
+        scheduleSaveState();
         showToast('Sound added from library');
     });
 }
@@ -1034,7 +1040,7 @@ async function libraryAddFile() {
         libraryData.set(fileId, { name: file.name });
         input.value = '';
         refreshLibraryList();
-        saveState();
+        scheduleSaveState();
         showToast('File added to library');
     } catch (e) {
         console.error('Failed to add file to library', e);
@@ -1061,7 +1067,7 @@ async function libraryDeleteFile(fileId) {
 
     libraryData.delete(fileId);
     refreshLibraryList();
-    saveState();
+    scheduleSaveState();
     showToast('File deleted from library');
 }
 
