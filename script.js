@@ -839,12 +839,24 @@ function refreshLibraryList() {
         item.className = 'library-item';
         const nameSpan = document.createElement('span');
         nameSpan.textContent = data.name;
-        const btn = document.createElement('button');
-        btn.className = 'btn small';
-        btn.textContent = 'Add to Tab';
-        btn.onclick = () => addFromLibrary(fileId, currentTab);
+        const btnContainer = document.createElement('div');
+        btnContainer.className = 'library-buttons';
+
+        const addBtn = document.createElement('button');
+        addBtn.className = 'btn small';
+        addBtn.textContent = 'Add to Tab';
+        addBtn.onclick = () => addFromLibrary(fileId, currentTab);
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn small danger';
+        delBtn.textContent = 'Delete';
+        delBtn.onclick = () => libraryDeleteFile(fileId);
+
+        btnContainer.appendChild(addBtn);
+        btnContainer.appendChild(delBtn);
+
         item.appendChild(nameSpan);
-        item.appendChild(btn);
+        item.appendChild(btnContainer);
         list.appendChild(item);
     });
 }
@@ -898,6 +910,29 @@ async function libraryAddFile() {
         console.error('Failed to add file to library', e);
         showToast('Error adding file to library');
     }
+}
+
+async function libraryDeleteFile(fileId) {
+    const data = libraryData.get(fileId);
+    if (!data) return;
+
+    if (isFileReferencedInTabs(fileId)) {
+        const proceed = confirm('This file is used in one or more tabs. Deleting it may break those sounds after reload. Continue?');
+        if (!proceed) return;
+    }
+
+    try {
+        await storage.remove(fileId);
+    } catch (e) {
+        console.error('Failed to remove file from storage', e);
+        showToast('Error deleting file');
+        return;
+    }
+
+    libraryData.delete(fileId);
+    refreshLibraryList();
+    saveState();
+    showToast('File deleted from library');
 }
 
 // Initialize first tab with rename functionality
