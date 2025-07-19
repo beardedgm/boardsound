@@ -535,7 +535,12 @@ function startRenameSound(soundId, tabId) {
         newTitle.ondblclick = () => startRenameSound(soundId, tabId);
         input.replaceWith(newTitle);
         sound.name = name;
-        saveState();
+
+        if (save && sound.fileKey && libraryData.has(sound.fileKey)) {
+            renameFile(sound.fileKey, name);
+        } else {
+            saveState();
+        }
     };
 
     input.addEventListener('keydown', (e) => {
@@ -583,6 +588,34 @@ function isFileReferencedInTabs(fileKey) {
         }
     }
     return false;
+}
+
+function renameFile(fileId, newName) {
+    const data = libraryData.get(fileId);
+    if (data) {
+        data.name = newName;
+    } else {
+        libraryData.set(fileId, { name: newName });
+    }
+
+    tabData.forEach(tab => {
+        tab.sounds.forEach(sound => {
+            if (sound.fileKey === fileId) {
+                sound.name = newName;
+                const title = sound.element.querySelector('.sound-title');
+                if (title) {
+                    title.textContent = newName;
+                    title.title = newName;
+                }
+            }
+        });
+    });
+
+    if (!document.getElementById('libraryModal').classList.contains('hidden')) {
+        refreshLibraryList();
+    }
+
+    saveState();
 }
 
 // Global controls
@@ -847,12 +880,18 @@ function refreshLibraryList() {
         addBtn.textContent = 'Add to Tab';
         addBtn.onclick = () => addFromLibrary(fileId, currentTab);
 
+        const renameBtn = document.createElement('button');
+        renameBtn.className = 'btn small';
+        renameBtn.textContent = 'Rename';
+        renameBtn.onclick = () => libraryRenameFile(fileId);
+
         const delBtn = document.createElement('button');
         delBtn.className = 'btn small danger';
         delBtn.textContent = 'Delete';
         delBtn.onclick = () => libraryDeleteFile(fileId);
 
         btnContainer.appendChild(addBtn);
+        btnContainer.appendChild(renameBtn);
         btnContainer.appendChild(delBtn);
 
         item.appendChild(nameSpan);
@@ -891,6 +930,16 @@ function addFromLibrary(fileId, tabId) {
         saveState();
         showToast('Sound added from library');
     });
+}
+
+function libraryRenameFile(fileId) {
+    const data = libraryData.get(fileId);
+    if (!data) return;
+    const name = prompt('Enter new file name', data.name);
+    if (name && name.trim()) {
+        renameFile(fileId, name.trim());
+        showToast('File renamed');
+    }
 }
 
 async function libraryAddFile() {
