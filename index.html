@@ -20,6 +20,7 @@
                 </div>
                 <button class="btn" onclick="stopAllSounds()">Stop All</button>
                 <button class="btn danger" onclick="clearCurrentPanel()">Clear Panel</button>
+                <button class="btn" onclick="openLibrary()">Library</button>
             </div>
         </div>
 
@@ -55,6 +56,19 @@
             <div style="margin-top: 15px;">
                 <button class="btn primary" onclick="confirmTabAction()">Create</button>
                 <button class="btn" onclick="cancelTabAction()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sound Library Modal -->
+    <div id="libraryModal" class="modal hidden">
+        <div class="modal-content library">
+            <h3>Sound Library</h3>
+            <div id="libraryList" class="library-list"></div>
+            <div class="library-actions">
+                <input type="file" id="libraryFileInput" accept=".mp3,.wav">
+                <button class="btn primary" onclick="libraryAddFile()">Add File</button>
+                <button class="btn" onclick="closeLibrary()">Close</button>
             </div>
         </div>
     </div>
