@@ -244,8 +244,15 @@ async function loadSound(input, tabId, isTemporary = false) {
 
         // Replace the empty slot
         const grid = document.getElementById(`grid-${tabId}`);
-        const emptySlot = input.closest('.empty-slot');
-        emptySlot.replaceWith(soundCard);
+        let emptySlot = input.closest('.empty-slot');
+        if (!emptySlot) {
+            emptySlot = grid.querySelector('.empty-slot');
+        }
+        if (emptySlot) {
+            emptySlot.replaceWith(soundCard);
+        } else {
+            grid.appendChild(soundCard);
+        }
 
         // Create new empty slot
         const newEmptySlot = createEmptySlot(tabId);
