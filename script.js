@@ -718,32 +718,14 @@ function stopAllSounds() {
 function clearCurrentPanel() {
     if (confirm('Are you sure you want to clear all sounds from this panel?')) {
         const tab = tabData.get(currentTab);
-        
-        // Stop and cleanup all sounds
-        tab.sounds.forEach(sound => {
-            sound.audio.pause();
-            sound.audio.src = '';
-            if (sound.gainNode) sound.gainNode.disconnect();
-            if (sound.objectUrl) {
-                URL.revokeObjectURL(sound.objectUrl);
-                objectUrls.delete(sound.objectUrl);
-            }
-            const fileKey = sound.fileKey;
-            sound.element.remove();
-            if (fileKey && !isFileReferencedInTabs(fileKey) && !libraryData.has(fileKey)) {
-                storage.remove(fileKey);
-            }
-        });
-        
-        // Clear data structures
+
+        // Remove each sound using existing cleanup logic
+        for (const soundId of Array.from(tab.sounds.keys())) {
+            removeSound(soundId, currentTab);
+        }
+
+        // Ensure map is cleared
         tab.sounds.clear();
-        
-        // Remove all audio elements for this tab
-        audioElements.forEach((audio, soundId) => {
-            if (tab.sounds.has(soundId)) {
-                audioElements.delete(soundId);
-            }
-        });
         
         // Reset grid with empty slot
         const grid = document.getElementById(`grid-${currentTab}`);
