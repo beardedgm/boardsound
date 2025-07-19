@@ -238,6 +238,11 @@ input[type="range"] {
     overflow: hidden;
 }
 
+.sound-card.temporary {
+    background: linear-gradient(145deg, #4a3a2a 0%, #3e2e1e 100%);
+    border: 2px dashed #ff9500;
+}
+
 .sound-card:hover {
     border-color: #666;
     transform: translateY(-2px);
@@ -256,6 +261,25 @@ input[type="range"] {
 
 .sound-card.looping {
     border-style: dashed;
+}
+
+.sound-card.temporary .sound-header {
+    margin-top: 18px;
+}
+
+.temp-indicator {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    background: rgba(255, 149, 0, 0.9);
+    color: #000;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    text-align: center;
+    z-index: 2;
 }
 
 .sound-header {
@@ -487,13 +511,6 @@ input[type="range"] {
     background: linear-gradient(145deg, #333 0%, #2a2a2a 100%);
 }
 
-.empty-slot input[type="file"] {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    cursor: pointer;
-    z-index: 0;
-}
 
 .empty-text {
     color: #888;
@@ -522,6 +539,12 @@ input[type="range"] {
 
 .url-btn:hover {
     background: #666;
+}
+
+.button-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
 }
 
 .remove-sound {
