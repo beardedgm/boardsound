@@ -68,12 +68,12 @@ function blobToDataURL(blob) {
 function setupWebAudio(audio, initialVolume = 1.0) {
     initAudioContext();
     if (!audioCtx) return null;
-    const source = audioCtx.createMediaElementSource(audio);
+    const sourceNode = audioCtx.createMediaElementSource(audio);
     const gainNode = audioCtx.createGain();
     gainNode.gain.value = initialVolume;
-    source.connect(gainNode);
+    sourceNode.connect(gainNode);
     gainNode.connect(masterGain);
-    return gainNode;
+    return { sourceNode, gainNode };
 }
 
 // Initialize first tab
@@ -240,7 +240,7 @@ async function loadSound(input, tabId, isTemporary = false) {
         }
         const objectUrl = URL.createObjectURL(file);
         const audio = new Audio(objectUrl);
-        const gainNode = setupWebAudio(audio);
+        const { sourceNode, gainNode } = setupWebAudio(audio);
 
         // Create sound card
         const soundCard = createSoundCard(soundId, file.name, audio, tabId, isTemporary);
@@ -265,6 +265,7 @@ async function loadSound(input, tabId, isTemporary = false) {
         tab.sounds.set(soundId, {
             name: file.name,
             audio: audio,
+            sourceNode: sourceNode,
             gainNode: gainNode,
             isLooping: false,
             element: soundCard,
@@ -309,7 +310,7 @@ async function loadSoundFromUrl(url, tabId, isTemporary = false) {
         }
         const objectUrl = URL.createObjectURL(blob);
         const audio = new Audio(objectUrl);
-        const gainNode = setupWebAudio(audio);
+        const { sourceNode, gainNode } = setupWebAudio(audio);
 
         const soundCard = createSoundCard(soundId, name, audio, tabId, isTemporary);
 
@@ -322,6 +323,7 @@ async function loadSoundFromUrl(url, tabId, isTemporary = false) {
         tab.sounds.set(soundId, {
             name,
             audio,
+            sourceNode: sourceNode,
             gainNode: gainNode,
             isLooping: false,
             element: soundCard,
@@ -647,6 +649,7 @@ function removeSound(soundId, tabId) {
         // Stop and cleanup audio
         sound.audio.pause();
         sound.audio.src = '';
+        if (sound.sourceNode) sound.sourceNode.disconnect();
         if (sound.gainNode) sound.gainNode.disconnect();
         const fileKey = sound.fileKey;
 
@@ -867,7 +870,7 @@ async function loadState() {
                 if (!blob) continue;
                 const objectUrl = URL.createObjectURL(blob);
                 const audio = new Audio(objectUrl);
-                const gainNode = setupWebAudio(audio, s.volume);
+                const { sourceNode, gainNode } = setupWebAudio(audio, s.volume);
                 audio.loop = s.isLooping;
                 const card = createSoundCard(s.id, s.name, audio, tab.id);
                 grid.appendChild(card);
@@ -875,6 +878,7 @@ async function loadState() {
                 tabData.get(tab.id).sounds.set(s.id, {
                     name: s.name,
                     audio,
+                    sourceNode: sourceNode,
                     gainNode: gainNode,
                     isLooping: s.isLooping,
                     element: card,
@@ -993,7 +997,7 @@ function addFromLibrary(fileId, tabId) {
         if (!blob) return;
         const objectUrl = URL.createObjectURL(blob);
         const audio = new Audio(objectUrl);
-        const gainNode = setupWebAudio(audio);
+        const { sourceNode, gainNode } = setupWebAudio(audio);
         const soundId = `sound-${soundCounter++}`;
 
         const soundCard = createSoundCard(soundId, data.name, audio, tabId);
@@ -1006,6 +1010,7 @@ function addFromLibrary(fileId, tabId) {
         tab.sounds.set(soundId, {
             name: data.name,
             audio,
+            sourceNode: sourceNode,
             gainNode: gainNode,
             isLooping: false,
             element: soundCard,
