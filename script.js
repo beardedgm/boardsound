@@ -214,6 +214,52 @@ function loadSound(input, tabId) {
     });
 }
 
+async function loadSoundFromUrl(url, tabId) {
+    try {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        if (!blob.type.includes('audio')) {
+            alert('URL must point to an audio file');
+            return;
+        }
+        const name = url.split('/').pop().split('?')[0] || 'audio';
+        const soundId = `sound-${soundCounter++}`;
+        await storage.put(soundId, blob);
+        const objectUrl = URL.createObjectURL(blob);
+        const audio = new Audio(objectUrl);
+
+        const soundCard = createSoundCard(soundId, name, audio, tabId);
+
+        const grid = document.getElementById(`grid-${tabId}`);
+        const emptySlot = grid.querySelector('.empty-slot');
+        if (emptySlot) emptySlot.replaceWith(soundCard);
+        grid.appendChild(createEmptySlot(tabId));
+
+        const tab = tabData.get(tabId);
+        tab.sounds.set(soundId, {
+            name,
+            audio,
+            isLooping: false,
+            element: soundCard,
+            volume: 1.0,
+            fileKey: soundId
+        });
+
+        audioElements.set(soundId, audio);
+        setupAudioEvents(audio, soundId, tabId);
+        saveState();
+    } catch (e) {
+        alert('Failed to load audio from URL');
+    }
+}
+
+function promptLoadFromUrl(tabId) {
+    const url = prompt('Enter MP3/WAV URL');
+    if (url) {
+        loadSoundFromUrl(url.trim(), tabId);
+    }
+}
+
 function createSoundCard(soundId, name, audio, tabId) {
     const card = document.createElement('div');
     card.className = 'sound-card';
@@ -311,6 +357,7 @@ function createEmptySlot(tabId) {
             <strong>Drop or Click</strong>
             Add MP3/WAV file
         </div>
+        <button class="url-btn" onclick="promptLoadFromUrl(${tabId})">Load from URL</button>
     `;
     setupEmptySlotDrag(emptySlot);
     return emptySlot;
