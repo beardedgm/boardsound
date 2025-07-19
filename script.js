@@ -17,6 +17,14 @@ let audioCtx = null;
 let masterGain = null;
 let saveTimer = null;
 
+// Cached element references
+const tabModal = document.getElementById('tabModal');
+const tabNameInput = document.getElementById('tabNameInput');
+const libraryModal = document.getElementById('libraryModal');
+const libraryList = document.getElementById('libraryList');
+const masterVolumeValue = document.getElementById('masterVolumeValue');
+const toastContainer = document.getElementById('toastContainer');
+
 function initAudioContext() {
     if (!audioCtx) {
         const AC = window.AudioContext || window.webkitAudioContext;
@@ -28,12 +36,11 @@ function initAudioContext() {
 }
 
 function showToast(msg) {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
+    if (!toastContainer) return;
     const toast = document.createElement('div');
     toast.className = 'toast';
     toast.textContent = msg;
-    container.appendChild(toast);
+    toastContainer.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
 }
 
@@ -80,9 +87,9 @@ function addNewTab() {
     renamingTabId = null;
     document.getElementById('modalTitle').textContent = 'Name Your Tab';
     document.querySelector('.btn.primary').textContent = 'Create';
-    document.getElementById('tabNameInput').value = '';
-    document.getElementById('tabModal').classList.remove('hidden');
-    document.getElementById('tabNameInput').focus();
+    tabNameInput.value = '';
+    tabModal.classList.remove('hidden');
+    tabNameInput.focus();
 }
 
 function renameTab(tabId) {
@@ -90,13 +97,13 @@ function renameTab(tabId) {
     const tab = tabData.get(tabId);
     document.getElementById('modalTitle').textContent = 'Rename Tab';
     document.querySelector('.btn.primary').textContent = 'Rename';
-    document.getElementById('tabNameInput').value = tab.name;
-    document.getElementById('tabModal').classList.remove('hidden');
-    document.getElementById('tabNameInput').select();
+    tabNameInput.value = tab.name;
+    tabModal.classList.remove('hidden');
+    tabNameInput.select();
 }
 
 function confirmTabAction() {
-    const nameInput = document.getElementById('tabNameInput');
+    const nameInput = tabNameInput;
     const name = nameInput.value.trim();
     
     if (renamingTabId !== null) {
@@ -123,11 +130,9 @@ function cancelTabAction() {
 }
 
 function closeTabModal() {
-    const modal = document.getElementById('tabModal');
-    const nameInput = document.getElementById('tabNameInput');
-    modal.classList.add('hidden');
-    nameInput.value = '';
-    nameInput.blur();
+    tabModal.classList.add('hidden');
+    tabNameInput.value = '';
+    tabNameInput.blur();
     renamingTabId = null;
 }
 
@@ -694,7 +699,7 @@ function renameFile(fileId, newName) {
         });
     });
 
-    if (!document.getElementById('libraryModal').classList.contains('hidden')) {
+    if (!libraryModal.classList.contains('hidden')) {
         refreshLibraryList();
     }
 
@@ -732,7 +737,7 @@ function clearCurrentPanel() {
 // Volume control functions
 function updateMasterVolume(value) {
     masterVolume = value / 100;
-    document.getElementById('masterVolumeValue').textContent = value + '%';
+    masterVolumeValue.textContent = value + '%';
     if (masterGain) masterGain.gain.value = masterVolume;
     
     // Update all currently loaded audio elements
@@ -827,7 +832,7 @@ async function loadState() {
         currentTab = state.currentTab ?? 0;
 
         document.getElementById('masterVolume').value = Math.round(masterVolume * 100);
-        document.getElementById('masterVolumeValue').textContent = Math.round(masterVolume * 100) + '%';
+        masterVolumeValue.textContent = Math.round(masterVolume * 100) + '%';
 
         const tabContainer = document.querySelector('.tab-container');
         const addTabBtn = document.querySelector('.add-tab');
@@ -918,7 +923,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Modal keyboard handling
-document.getElementById('tabNameInput').addEventListener('keydown', (e) => {
+tabNameInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
         e.preventDefault();
         confirmTabAction();
@@ -929,7 +934,7 @@ document.getElementById('tabNameInput').addEventListener('keydown', (e) => {
 });
 
 // Click outside modal to close
-document.getElementById('tabModal').addEventListener('click', (e) => {
+tabModal.addEventListener('click', (e) => {
     if (e.target.id === 'tabModal') {
         cancelTabAction();
     }
@@ -937,18 +942,17 @@ document.getElementById('tabModal').addEventListener('click', (e) => {
 
 function openLibrary() {
     refreshLibraryList();
-    document.getElementById('libraryModal').classList.remove('hidden');
+    libraryModal.classList.remove('hidden');
 }
 
 function closeLibrary() {
-    document.getElementById('libraryModal').classList.add('hidden');
+    libraryModal.classList.add('hidden');
     const input = document.getElementById('libraryFileInput');
     if (input) input.value = '';
 }
 
 function refreshLibraryList() {
-    const list = document.getElementById('libraryList');
-    list.innerHTML = '';
+    libraryList.innerHTML = '';
     libraryData.forEach((data, fileId) => {
         const item = document.createElement('div');
         item.className = 'library-item';
@@ -978,7 +982,7 @@ function refreshLibraryList() {
 
         item.appendChild(nameSpan);
         item.appendChild(btnContainer);
-        list.appendChild(item);
+        libraryList.appendChild(item);
     });
 }
 
