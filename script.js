@@ -832,7 +832,6 @@ async function loadState() {
         libraryData.clear();
 
         let migrated = false;
-        libraryData.clear();
         if (Array.isArray(state.library)) {
             state.library.forEach(item => {
                 libraryData.set(item.id, { name: item.name });
