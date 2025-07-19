@@ -11,7 +11,10 @@ const storage = (() => {
                 request.result.createObjectStore(STORE_NAME);
             };
             request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
+            request.onerror = () => {
+                console.error('IndexedDB open error', request.error);
+                reject(request.error);
+            };
         });
         return dbPromise;
     }
@@ -22,7 +25,10 @@ const storage = (() => {
             const tx = db.transaction(STORE_NAME, 'readwrite');
             tx.objectStore(STORE_NAME).put(blob, key);
             tx.oncomplete = () => resolve(key);
-            tx.onerror = () => reject(tx.error);
+            tx.onerror = () => {
+                console.error('IndexedDB put error', tx.error);
+                reject(tx.error);
+            };
         });
     }
 
@@ -32,7 +38,10 @@ const storage = (() => {
             const tx = db.transaction(STORE_NAME, 'readonly');
             const req = tx.objectStore(STORE_NAME).get(key);
             req.onsuccess = () => resolve(req.result || null);
-            req.onerror = () => reject(req.error);
+            req.onerror = () => {
+                console.error('IndexedDB get error', req.error);
+                reject(req.error);
+            };
         });
     }
 
@@ -42,7 +51,10 @@ const storage = (() => {
             const tx = db.transaction(STORE_NAME, 'readwrite');
             tx.objectStore(STORE_NAME).delete(key);
             tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
+            tx.onerror = () => {
+                console.error('IndexedDB remove error', tx.error);
+                reject(tx.error);
+            };
         });
     }
 
