@@ -472,6 +472,7 @@ body {
     inset: 0;
     opacity: 0;
     cursor: pointer;
+    z-index: 0;
 }
 
 .empty-text {
@@ -495,6 +496,8 @@ body {
     background: #555;
     color: #fff;
     transition: background 0.2s ease;
+    position: relative;
+    z-index: 1;
 }
 
 .url-btn:hover {
