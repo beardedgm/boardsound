@@ -9,8 +9,8 @@ let masterVolume = 1.0;
 let draggedCard = null;
 let libraryCounter = 0;
 let libraryData = new Map();
-// Track temporary object URLs for cleanup
-const temporaryFiles = new Set();
+// Track object URLs for cleanup on unload
+const objectUrls = new Set();
 const LOCAL_STORAGE_KEY = 'soundboardState';
 // Web Audio context setup
 let audioCtx = null;
@@ -190,6 +190,10 @@ function removeTab(tabId) {
                 sound.audio.src = '';
                 if (sound.gainNode) sound.gainNode.disconnect();
             }
+            if (sound.objectUrl) {
+                URL.revokeObjectURL(sound.objectUrl);
+                objectUrls.delete(sound.objectUrl);
+            }
         });
     }
     
@@ -273,9 +277,8 @@ async function loadSound(input, tabId, isTemporary = false) {
 
         if (!isTemporary && fileId) {
             libraryData.set(fileId, { name: file.name });
-        } else {
-            temporaryFiles.add(objectUrl);
         }
+        objectUrls.add(objectUrl);
 
         audioElements.set(soundId, audio);
 
@@ -331,9 +334,8 @@ async function loadSoundFromUrl(url, tabId, isTemporary = false) {
 
         if (!isTemporary && fileId) {
             libraryData.set(fileId, { name });
-        } else {
-            temporaryFiles.add(objectUrl);
         }
+        objectUrls.add(objectUrl);
 
         audioElements.set(soundId, audio);
         setupAudioEvents(audio, soundId, tabId);
@@ -649,9 +651,9 @@ function removeSound(soundId, tabId) {
         if (sound.gainNode) sound.gainNode.disconnect();
         const fileKey = sound.fileKey;
 
-        if (sound.isTemporary && sound.objectUrl) {
+        if (sound.objectUrl) {
             URL.revokeObjectURL(sound.objectUrl);
-            temporaryFiles.delete(sound.objectUrl);
+            objectUrls.delete(sound.objectUrl);
         }
 
         // Remove from DOM and data structures
@@ -722,6 +724,10 @@ function clearCurrentPanel() {
             sound.audio.pause();
             sound.audio.src = '';
             if (sound.gainNode) sound.gainNode.disconnect();
+            if (sound.objectUrl) {
+                URL.revokeObjectURL(sound.objectUrl);
+                objectUrls.delete(sound.objectUrl);
+            }
             const fileKey = sound.fileKey;
             sound.element.remove();
             if (fileKey && !isFileReferencedInTabs(fileKey) && !libraryData.has(fileKey)) {
@@ -874,8 +880,8 @@ async function loadState() {
 
                 const blob = await storage.get(s.fileKey);
                 if (!blob) continue;
-                const url = URL.createObjectURL(blob);
-                const audio = new Audio(url);
+                const objectUrl = URL.createObjectURL(blob);
+                const audio = new Audio(objectUrl);
                 const gainNode = setupWebAudio(audio, s.volume);
                 audio.loop = s.isLooping;
                 const card = createSoundCard(s.id, s.name, audio, tab.id);
@@ -888,8 +894,11 @@ async function loadState() {
                     isLooping: s.isLooping,
                     element: card,
                     volume: s.volume,
-                    fileKey: s.fileKey
+                    fileKey: s.fileKey,
+                    objectUrl
                 });
+
+                objectUrls.add(objectUrl);
 
                 if (!libraryData.has(s.fileKey)) {
                     libraryData.set(s.fileKey, { name: s.name });
@@ -998,8 +1007,8 @@ function addFromLibrary(fileId, tabId) {
     if (!data) return;
     storage.get(fileId).then(blob => {
         if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
+        const objectUrl = URL.createObjectURL(blob);
+        const audio = new Audio(objectUrl);
         const gainNode = setupWebAudio(audio);
         const soundId = `sound-${soundCounter++}`;
 
@@ -1017,8 +1026,11 @@ function addFromLibrary(fileId, tabId) {
             isLooping: false,
             element: soundCard,
             volume: 1.0,
-            fileKey: fileId
+            fileKey: fileId,
+            objectUrl
         });
+
+        objectUrls.add(objectUrl);
 
         audioElements.set(soundId, audio);
         setupAudioEvents(audio, soundId, tabId);
@@ -1182,6 +1194,6 @@ document.addEventListener('drop', (e) => e.preventDefault());
 
 // Cleanup temporary object URLs on page unload
 window.addEventListener('beforeunload', () => {
-    temporaryFiles.forEach(url => URL.revokeObjectURL(url));
-    temporaryFiles.clear();
+    objectUrls.forEach(url => URL.revokeObjectURL(url));
+    objectUrls.clear();
 });
