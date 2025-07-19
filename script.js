@@ -313,9 +313,7 @@ function createSoundCard(soundId, name, audio, tabId) {
             <input type="range" class="sound-volume-slider" id="volume-${soundId}"
                    min="0" max="100" value="100"
                    oninput="updateSoundVolume('${soundId}', ${tabId}, this.value)">
-            <input type="number" class="volume-number" id="volumeNum-${soundId}"
-                   min="0" max="100" value="100"
-                   oninput="updateSoundVolume('${soundId}', ${tabId}, this.value)">
+
             <span class="sound-volume-value" id="volumeValue-${soundId}">100%</span>
         </div>
         <div class="time-controls">
